@@ -78,16 +78,19 @@ class _DocumentViewerPageState extends State<DocumentViewerPage> {
     }
   }
 
-  void _loadContent() {
+  Future<void> _loadContent() async {
     if (_currentFileType == 'txt') {
       try {
         final file = File(_currentFilePath);
-        if (file.existsSync()) {
+        if (await file.exists()) {
+          final text = await file.readAsString();
+          if (!mounted) return;
           setState(() {
-            _textContent = file.readAsStringSync();
+            _textContent = text;
           });
         }
       } catch (e) {
+        if (!mounted) return;
         setState(() {
           _textContent = 'Failed to load text file: ${e.toString()}';
         });
@@ -650,6 +653,10 @@ class _DocumentViewerPageState extends State<DocumentViewerPage> {
         ),
       );
     } else if (['jpg', 'png', 'webp'].contains(_currentFileType)) {
+      final targetImageWidth =
+          (MediaQuery.sizeOf(context).width *
+                  MediaQuery.devicePixelRatioOf(context))
+              .round();
       return Container(
         color: Colors.black12,
         alignment: Alignment.center,
@@ -658,7 +665,7 @@ class _DocumentViewerPageState extends State<DocumentViewerPage> {
           maxScale: 4.0,
           child: RotatedBox(
             quarterTurns: _rotationQuarterTurns,
-            child: Image.file(file),
+            child: Image.file(file, cacheWidth: targetImageWidth),
           ),
         ),
       );

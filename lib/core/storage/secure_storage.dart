@@ -35,7 +35,6 @@ class SecureStorage {
   }
 
   Future<void> clearSecureData() async {
-    await _storage.delete(key: _pinKey);
-    await _storage.delete(key: _biometricKey);
+    await _storage.deleteAll();
   }
 }

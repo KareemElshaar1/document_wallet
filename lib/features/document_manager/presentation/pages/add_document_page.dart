@@ -70,12 +70,16 @@ class _AddDocumentPageState extends State<AddDocumentPage> {
     switch (widget.launchMode) {
       case AddDocumentLaunchMode.camera:
         await _importFromCamera();
+        break;
       case AddDocumentLaunchMode.gallery:
         await _importFromGallery();
+        break;
       case AddDocumentLaunchMode.file:
         await _importFromFilePicker();
+        break;
       case AddDocumentLaunchMode.qr:
         await _scanQrAndAttachPhoto();
+        break;
       case AddDocumentLaunchMode.none:
         break;
     }

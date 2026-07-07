@@ -39,7 +39,7 @@ class _SearchPageState extends State<SearchPage> {
       final matchesQuery =
           q.isEmpty ||
           doc.title.toLowerCase().contains(q) ||
-          (doc.description?.toLowerCase().contains(q) ?? false) ||
+          doc.description.toLowerCase().contains(q) ||
           doc.tags.any((t) => t.toLowerCase().contains(q));
 
       final matchesCategory =

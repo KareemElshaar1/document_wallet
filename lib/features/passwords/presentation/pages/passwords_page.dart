@@ -6,6 +6,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:gap/gap.dart';
 
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/helpers/icon_code_helper.dart';
 import '../../../../core/helpers/pin_auth_dialog.dart';
 import '../../../../core/l10n/app_localizations.dart';
 import '../../../../core/widgets/glassmorphic_container.dart';
@@ -50,17 +51,22 @@ class _PasswordsPageState extends State<PasswordsPage> {
     });
   }
 
-  Future<void> _handleRevealPassword(PasswordModel model, AppLocalizations l10n) async {
+  Future<void> _handleRevealPassword(
+    PasswordModel model,
+    AppLocalizations l10n,
+  ) async {
     final authenticated = await showPinAuthDialog(context);
     if (!authenticated || !mounted) return;
 
-    final plain = await context.read<PasswordCubit>().getPlainPassword(model.id);
+    final plain = await context.read<PasswordCubit>().getPlainPassword(
+      model.id,
+    );
     if (plain != null && mounted) {
       _showDecryptedPasswordDialog(model, plain, l10n);
     } else if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Unable to load password')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Unable to load password')));
     }
   }
 
@@ -87,7 +93,10 @@ class _PasswordsPageState extends State<PasswordsPage> {
                   ),
                   Text(
                     model.username,
-                    style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      fontSize: 16.sp,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   Gap(12.h),
                   Text(
@@ -108,7 +117,9 @@ class _PasswordsPageState extends State<PasswordsPage> {
                       ),
                       IconButton(
                         icon: Icon(
-                          obscure ? Icons.visibility_off_rounded : Icons.visibility_rounded,
+                          obscure
+                              ? Icons.visibility_off_rounded
+                              : Icons.visibility_rounded,
                         ),
                         onPressed: () {
                           setDialogState(() {
@@ -150,18 +161,31 @@ class _PasswordsPageState extends State<PasswordsPage> {
 
     final categories = [
       {'tag': 'social', 'label': l10n.social, 'icon': Icons.people_rounded},
-      {'tag': 'banking', 'label': l10n.banking, 'icon': Icons.account_balance_rounded},
-      {'tag': 'work', 'label': l10n.work, 'icon': Icons.business_center_rounded},
-      {'tag': 'shopping', 'label': l10n.shopping, 'icon': Icons.shopping_bag_rounded},
-      {'tag': 'entertainment', 'label': l10n.entertainment, 'icon': Icons.play_circle_fill_rounded},
+      {
+        'tag': 'banking',
+        'label': l10n.banking,
+        'icon': Icons.account_balance_rounded,
+      },
+      {
+        'tag': 'work',
+        'label': l10n.work,
+        'icon': Icons.business_center_rounded,
+      },
+      {
+        'tag': 'shopping',
+        'label': l10n.shopping,
+        'icon': Icons.shopping_bag_rounded,
+      },
+      {
+        'tag': 'entertainment',
+        'label': l10n.entertainment,
+        'icon': Icons.play_circle_fill_rounded,
+      },
       {'tag': 'other', 'label': l10n.other, 'icon': Icons.more_horiz_rounded},
     ];
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.passwords),
-        centerTitle: true,
-      ),
+      appBar: AppBar(title: Text(l10n.passwords), centerTitle: true),
       body: Column(
         children: [
           Padding(
@@ -228,7 +252,11 @@ class _PasswordsPageState extends State<PasswordsPage> {
                 return Padding(
                   padding: EdgeInsets.only(right: 8.w),
                   child: ChoiceChip(
-                    avatar: Icon(icon, size: 16.r, color: isSelected ? Colors.white : AppColors.primary),
+                    avatar: Icon(
+                      icon,
+                      size: 16.r,
+                      color: isSelected ? Colors.white : AppColors.primary,
+                    ),
                     label: Text(label),
                     selected: isSelected,
                     onSelected: (_) {
@@ -247,9 +275,9 @@ class _PasswordsPageState extends State<PasswordsPage> {
             child: BlocConsumer<PasswordCubit, PasswordState>(
               listener: (context, state) {
                 if (state is PasswordError) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(state.message)),
-                  );
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text(state.message)));
                 }
               },
               builder: (context, state) {
@@ -262,13 +290,17 @@ class _PasswordsPageState extends State<PasswordsPage> {
 
                   if (_searchQuery.isNotEmpty) {
                     list = list.where((item) {
-                      return item.serviceName.toLowerCase().contains(_searchQuery) ||
+                      return item.serviceName.toLowerCase().contains(
+                            _searchQuery,
+                          ) ||
                           item.username.toLowerCase().contains(_searchQuery);
                     }).toList();
                   }
 
                   if (_selectedCategory != null) {
-                    list = list.where((item) => item.categoryTag == _selectedCategory).toList();
+                    list = list
+                        .where((item) => item.categoryTag == _selectedCategory)
+                        .toList();
                   }
 
                   if (list.isEmpty) {
@@ -276,16 +308,26 @@ class _PasswordsPageState extends State<PasswordsPage> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.vpn_key_outlined, size: 80.r, color: Colors.grey.withOpacity(0.5)),
+                          Icon(
+                            Icons.vpn_key_outlined,
+                            size: 80.r,
+                            color: Colors.grey.withOpacity(0.5),
+                          ),
                           Gap(16.h),
                           Text(
                             l10n.noPasswords,
-                            style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                              fontSize: 16.sp,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                           Gap(8.h),
                           Text(
                             l10n.noPasswordsSubtitle,
-                            style: TextStyle(fontSize: 12.sp, color: Colors.grey),
+                            style: TextStyle(
+                              fontSize: 12.sp,
+                              color: Colors.grey,
+                            ),
                           ),
                         ],
                       ),
@@ -310,7 +352,10 @@ class _PasswordsPageState extends State<PasswordsPage> {
                             color: Colors.red,
                             borderRadius: BorderRadius.circular(16.r),
                           ),
-                          child: const Icon(Icons.delete_rounded, color: Colors.white),
+                          child: const Icon(
+                            Icons.delete_rounded,
+                            color: Colors.white,
+                          ),
                         ),
                         confirmDismiss: (_) async {
                           return await showDialog<bool>(
@@ -320,14 +365,17 @@ class _PasswordsPageState extends State<PasswordsPage> {
                                   content: Text(l10n.confirmDeleteMessage),
                                   actions: [
                                     TextButton(
-                                      onPressed: () => Navigator.pop(ctx, false),
+                                      onPressed: () =>
+                                          Navigator.pop(ctx, false),
                                       child: Text(l10n.cancel),
                                     ),
                                     TextButton(
                                       onPressed: () => Navigator.pop(ctx, true),
                                       child: Text(
                                         l10n.delete,
-                                        style: const TextStyle(color: Colors.red),
+                                        style: const TextStyle(
+                                          color: Colors.red,
+                                        ),
                                       ),
                                     ),
                                   ],
@@ -357,7 +405,9 @@ class _PasswordsPageState extends State<PasswordsPage> {
                                         shape: BoxShape.circle,
                                       ),
                                       child: Icon(
-                                        IconData(item.iconCode, fontFamily: 'MaterialIcons'),
+                                        IconCodeHelper.passwordIcon(
+                                          item.iconCode,
+                                        ),
                                         color: color,
                                         size: 24.r,
                                       ),
@@ -365,7 +415,8 @@ class _PasswordsPageState extends State<PasswordsPage> {
                                     Gap(16.w),
                                     Expanded(
                                       child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
                                           Text(
                                             item.serviceName,

@@ -10,11 +10,7 @@ class DocumentFile {
   });
 
   Map<String, dynamic> toMap() {
-    return {
-      'filePath': filePath,
-      'fileSize': fileSize,
-      'fileType': fileType,
-    };
+    return {'filePath': filePath, 'fileSize': fileSize, 'fileType': fileType};
   }
 
   factory DocumentFile.fromMap(Map<String, dynamic> map) {
@@ -91,8 +87,8 @@ class DocumentModel {
       description: map['description'] as String? ?? '',
       tags: List<String>.from(map['tags'] ?? []),
       createdAt: DateTime.parse(map['createdAt'] as String),
-      expirationDate: map['expirationDate'] != null 
-          ? DateTime.parse(map['expirationDate'] as String) 
+      expirationDate: map['expirationDate'] != null
+          ? DateTime.parse(map['expirationDate'] as String)
           : null,
       isFavorite: map['isFavorite'] as bool? ?? false,
       fileSize: map['fileSize'] as int? ?? 0,
@@ -101,8 +97,11 @@ class DocumentModel {
       isLocked: map['isLocked'] as bool? ?? false,
       additionalFiles: map['additionalFiles'] != null
           ? (map['additionalFiles'] as List)
-              .map((e) => DocumentFile.fromMap(Map<String, dynamic>.from(e as Map)))
-              .toList()
+                .map(
+                  (e) =>
+                      DocumentFile.fromMap(Map<String, dynamic>.from(e as Map)),
+                )
+                .toList()
           : const [],
     );
   }
@@ -113,6 +112,7 @@ class DocumentModel {
     String? categoryId,
     String? categoryName,
     String? folderId,
+    bool clearFolderId = false,
     String? description,
     List<String>? tags,
     DateTime? createdAt,
@@ -129,7 +129,7 @@ class DocumentModel {
       title: title ?? this.title,
       categoryId: categoryId ?? this.categoryId,
       categoryName: categoryName ?? this.categoryName,
-      folderId: folderId ?? this.folderId,
+      folderId: clearFolderId ? null : folderId ?? this.folderId,
       description: description ?? this.description,
       tags: tags ?? this.tags,
       createdAt: createdAt ?? this.createdAt,

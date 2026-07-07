@@ -16,9 +16,11 @@ import '../../../../core/storage/secure_storage.dart';
 import '../../../../core/l10n/app_localizations.dart';
 import '../../../authentication/presentation/cubit/auth_cubit.dart';
 import '../../../authentication/presentation/cubit/auth_state.dart';
+import '../../../cards/presentation/cubit/card_cubit.dart';
 import '../cubit/settings_cubit.dart';
 import '../cubit/settings_state.dart';
 import '../../../document_manager/presentation/cubit/document_cubit.dart';
+import '../../../passwords/presentation/cubit/password_cubit.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -100,13 +102,62 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   // --- BACKUP & RESTORE ---
+  Future<String?> _readFileAsBase64(String? path) async {
+    if (path == null || path.isEmpty) return null;
+
+    final file = File(path);
+    if (!await file.exists()) return null;
+
+    return base64Encode(await file.readAsBytes());
+  }
+
+  Future<String?> _restoreFileFromBase64({
+    required Directory localFolder,
+    required String? encodedBytes,
+    required String fileType,
+    required String namePrefix,
+  }) async {
+    if (encodedBytes == null || encodedBytes.isEmpty) return null;
+
+    final safeType = fileType.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '');
+    final extension = safeType.isEmpty ? 'bin' : safeType;
+    final fileName =
+        '${DateTime.now().microsecondsSinceEpoch}_$namePrefix.$extension';
+    final path = '${localFolder.path}/$fileName';
+    final file = File(path);
+
+    await file.writeAsBytes(base64Decode(encodedBytes), flush: true);
+    return path;
+  }
+
   Future<void> _exportBackup(BuildContext context) async {
     AppLocalizations.of(context);
     try {
       final folders = HiveStorage.getFolders();
-      final docs = HiveStorage.getDocuments();
+      final docs = <Map<String, dynamic>>[];
 
-      final backupData = {'version': 1, 'folders': folders, 'documents': docs};
+      for (final rawDoc in HiveStorage.getDocuments()) {
+        final doc = Map<String, dynamic>.from(rawDoc);
+        doc['fileBytesBase64'] = await _readFileAsBase64(
+          doc['filePath'] as String?,
+        );
+
+        final additionalFiles = <Map<String, dynamic>>[];
+        final rawAdditionalFiles = doc['additionalFiles'] as List? ?? const [];
+
+        for (final rawFile in rawAdditionalFiles) {
+          final fileMap = Map<String, dynamic>.from(rawFile as Map);
+          fileMap['fileBytesBase64'] = await _readFileAsBase64(
+            fileMap['filePath'] as String?,
+          );
+          additionalFiles.add(fileMap);
+        }
+
+        doc['additionalFiles'] = additionalFiles;
+        docs.add(doc);
+      }
+
+      final backupData = {'version': 2, 'folders': folders, 'documents': docs};
 
       final jsonString = jsonEncode(backupData);
 
@@ -147,9 +198,58 @@ class _SettingsPageState extends State<SettingsPage> {
         final folders = rawFolders
             .map((f) => Map<String, dynamic>.from(f))
             .toList();
-        final documents = rawDocs
-            .map((d) => Map<String, dynamic>.from(d))
-            .toList();
+
+        final appDir = await getApplicationDocumentsDirectory();
+        final localFolder = Directory('${appDir.path}/secure_wallet_files');
+        if (!await localFolder.exists()) {
+          await localFolder.create(recursive: true);
+        }
+
+        final documents = <Map<String, dynamic>>[];
+        for (final rawDoc in rawDocs) {
+          final doc = Map<String, dynamic>.from(rawDoc as Map);
+          final fileType = doc['fileType'] as String? ?? 'bin';
+          final restoredPath = await _restoreFileFromBase64(
+            localFolder: localFolder,
+            encodedBytes: doc.remove('fileBytesBase64') as String?,
+            fileType: fileType,
+            namePrefix: '${doc['id'] ?? 'document'}_main',
+          );
+
+          if (restoredPath != null) {
+            final restoredFile = File(restoredPath);
+            doc['filePath'] = restoredPath;
+            doc['fileSize'] = await restoredFile.length();
+          }
+
+          final additionalFiles = <Map<String, dynamic>>[];
+          final rawAdditionalFiles =
+              doc['additionalFiles'] as List? ?? const [];
+
+          for (var i = 0; i < rawAdditionalFiles.length; i++) {
+            final fileMap = Map<String, dynamic>.from(
+              rawAdditionalFiles[i] as Map,
+            );
+            final addFileType = fileMap['fileType'] as String? ?? 'bin';
+            final addPath = await _restoreFileFromBase64(
+              localFolder: localFolder,
+              encodedBytes: fileMap.remove('fileBytesBase64') as String?,
+              fileType: addFileType,
+              namePrefix: '${doc['id'] ?? 'document'}_$i',
+            );
+
+            if (addPath != null) {
+              final restoredFile = File(addPath);
+              fileMap['filePath'] = addPath;
+              fileMap['fileSize'] = await restoredFile.length();
+            }
+
+            additionalFiles.add(fileMap);
+          }
+
+          doc['additionalFiles'] = additionalFiles;
+          documents.add(doc);
+        }
 
         await cubit.restoreBackup(folders: folders, documents: documents);
         if (mounted) {
@@ -224,6 +324,15 @@ class _SettingsPageState extends State<SettingsPage> {
                       await file.delete();
                     }
                   } catch (_) {}
+
+                  for (final addFile in doc.additionalFiles) {
+                    try {
+                      final file = File(addFile.filePath);
+                      if (await file.exists()) {
+                        await file.delete();
+                      }
+                    } catch (_) {}
+                  }
                 }
 
                 // Clear Hive boxes and reset settings
@@ -235,6 +344,8 @@ class _SettingsPageState extends State<SettingsPage> {
                   Navigator.of(parentContext).pop();
                   await parentContext.read<AuthCubit>().checkAuthStatus();
                   parentContext.read<DocumentCubit>().loadAllData();
+                  await parentContext.read<PasswordCubit>().loadPasswords();
+                  await parentContext.read<CardCubit>().loadCards();
 
                   if (Navigator.of(parentContext).canPop()) {
                     Navigator.of(

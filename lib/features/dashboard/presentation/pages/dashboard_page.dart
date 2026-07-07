@@ -3,10 +3,10 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:animate_do/animate_do.dart';
 import 'package:gap/gap.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_strings.dart';
+import '../../../../core/helpers/icon_code_helper.dart';
 import '../../../../core/routing/app_router.dart';
 import '../../../../core/widgets/responsive_layout.dart';
 import '../../../../core/l10n/app_localizations.dart';
@@ -26,12 +26,6 @@ class DashboardPage extends StatefulWidget {
 class _DashboardPageState extends State<DashboardPage> {
   /// IDs of expiring docs the user has dismissed for this session
   final Set<String> _dismissedDocIds = {};
-
-  @override
-  void initState() {
-    super.initState();
-    context.read<DocumentCubit>().loadAllData();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -59,10 +53,14 @@ class _DashboardPageState extends State<DashboardPage> {
           return const Center(child: CircularProgressIndicator());
         }
 
+        final now = DateTime.now();
+        final categoryCounts = _countByCategory(state.documents);
+        final folderCounts = _countByFolder(state.documents);
         final warningBanner = _buildUrgentWarningBanner(
           context,
           state.documents,
           l10n,
+          now,
         );
 
         return SafeArea(
@@ -84,7 +82,7 @@ class _DashboardPageState extends State<DashboardPage> {
                   if (warningBanner != null) ...[warningBanner, Gap(20.h)],
                   FadeInUp(
                     duration: const Duration(milliseconds: 500),
-                    child: _buildStorageStats(state.documents, l10n),
+                    child: _buildStorageStats(state.documents, l10n, now),
                   ),
                   Gap(25.h),
                   FadeInUp(
@@ -94,14 +92,19 @@ class _DashboardPageState extends State<DashboardPage> {
                   Gap(25.h),
                   FadeInUp(
                     duration: const Duration(milliseconds: 700),
-                    child: _buildExpiringAlerts(context, state.documents, l10n),
+                    child: _buildExpiringAlerts(
+                      context,
+                      state.documents,
+                      l10n,
+                      now,
+                    ),
                   ),
                   Gap(25.h),
                   FadeInUp(
                     duration: const Duration(milliseconds: 800),
                     child: _buildCategoriesSection(
                       context,
-                      state.documents,
+                      categoryCounts,
                       l10n,
                     ),
                   ),
@@ -111,7 +114,7 @@ class _DashboardPageState extends State<DashboardPage> {
                     child: _buildFoldersSection(
                       context,
                       state.folders,
-                      state.documents,
+                      folderCounts,
                       l10n,
                     ),
                   ),
@@ -141,10 +144,14 @@ class _DashboardPageState extends State<DashboardPage> {
   }) {
     return BlocBuilder<DocumentCubit, DocumentState>(
       builder: (context, state) {
+        final now = DateTime.now();
+        final categoryCounts = _countByCategory(state.documents);
+        final folderCounts = _countByFolder(state.documents);
         final warningBanner = _buildUrgentWarningBanner(
           context,
           state.documents,
           l10n,
+          now,
         );
 
         return SafeArea(
@@ -178,14 +185,14 @@ class _DashboardPageState extends State<DashboardPage> {
                       flex: 3,
                       child: Column(
                         children: [
-                          _buildStorageStats(state.documents, l10n),
+                          _buildStorageStats(state.documents, l10n, now),
                           Gap(25.h),
                           _buildQuickActions(context, l10n),
                           Gap(25.h),
                           _buildFoldersSection(
                             context,
                             state.folders,
-                            state.documents,
+                            folderCounts,
                             l10n,
                           ),
                         ],
@@ -197,11 +204,16 @@ class _DashboardPageState extends State<DashboardPage> {
                       flex: 4,
                       child: Column(
                         children: [
-                          _buildExpiringAlerts(context, state.documents, l10n),
+                          _buildExpiringAlerts(
+                            context,
+                            state.documents,
+                            l10n,
+                            now,
+                          ),
                           Gap(25.h),
                           _buildCategoriesSection(
                             context,
-                            state.documents,
+                            categoryCounts,
                             l10n,
                           ),
                           Gap(25.h),
@@ -259,13 +271,35 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   // --- DOCUMENT OVERVIEW ---
-  Widget _buildStorageStats(List<DocumentModel> docs, AppLocalizations l10n) {
+  Map<String, int> _countByCategory(List<DocumentModel> docs) {
+    final counts = <String, int>{};
+    for (final doc in docs) {
+      counts.update(doc.categoryId, (value) => value + 1, ifAbsent: () => 1);
+    }
+    return counts;
+  }
+
+  Map<String, int> _countByFolder(List<DocumentModel> docs) {
+    final counts = <String, int>{};
+    for (final doc in docs) {
+      final folderId = doc.folderId;
+      if (folderId == null) continue;
+      counts.update(folderId, (value) => value + 1, ifAbsent: () => 1);
+    }
+    return counts;
+  }
+
+  Widget _buildStorageStats(
+    List<DocumentModel> docs,
+    AppLocalizations l10n,
+    DateTime now,
+  ) {
     final total = docs.length;
     final favorites = docs.where((d) => d.isFavorite).length;
     final locked = docs.where((d) => d.isLocked).length;
     final expiringSoon = docs.where((d) {
       if (d.expirationDate == null) return false;
-      final diff = d.expirationDate!.difference(DateTime.now()).inDays;
+      final diff = d.expirationDate!.difference(now).inDays;
       return diff >= 0 && diff <= 30;
     }).length;
 
@@ -482,8 +516,8 @@ class _DashboardPageState extends State<DashboardPage> {
     BuildContext context,
     List<DocumentModel> docs,
     AppLocalizations l10n,
+    DateTime now,
   ) {
-    final now = DateTime.now();
     final urgentDocs = <DocumentModel>[];
 
     for (final doc in docs) {
@@ -589,8 +623,8 @@ class _DashboardPageState extends State<DashboardPage> {
     BuildContext context,
     List<DocumentModel> docs,
     AppLocalizations l10n,
+    DateTime now,
   ) {
-    final now = DateTime.now();
     final expiredDocs = <DocumentModel>[];
     final todayDocs = <DocumentModel>[];
     final weekDocs = <DocumentModel>[];
@@ -812,7 +846,7 @@ class _DashboardPageState extends State<DashboardPage> {
   // --- CATEGORIES SECTION ---
   Widget _buildCategoriesSection(
     BuildContext context,
-    List<DocumentModel> docs,
+    Map<String, int> categoryCounts,
     AppLocalizations l10n,
   ) {
     final categories = [
@@ -877,7 +911,7 @@ class _DashboardPageState extends State<DashboardPage> {
               final cat = categories[index];
               final catName = cat['name'] as String;
               final catId = cat['id'] as String;
-              final count = docs.where((d) => d.categoryId == catId).length;
+              final count = categoryCounts[catId] ?? 0;
 
               return Card(
                 elevation: 0,
@@ -932,7 +966,7 @@ class _DashboardPageState extends State<DashboardPage> {
   Widget _buildFoldersSection(
     BuildContext context,
     List<FolderModel> folders,
-    List<DocumentModel> docs,
+    Map<String, int> folderCounts,
     AppLocalizations l10n,
   ) {
     if (folders.isEmpty) return const SizedBox.shrink();
@@ -952,7 +986,7 @@ class _DashboardPageState extends State<DashboardPage> {
             itemCount: folders.length,
             itemBuilder: (context, index) {
               final folder = folders[index];
-              final count = docs.where((d) => d.folderId == folder.id).length;
+              final count = folderCounts[folder.id] ?? 0;
 
               return Card(
                 elevation: 0,
@@ -982,10 +1016,7 @@ class _DashboardPageState extends State<DashboardPage> {
                     child: Row(
                       children: [
                         Icon(
-                          IconData(
-                            folder.iconCode,
-                            fontFamily: 'MaterialIcons',
-                          ),
+                          IconCodeHelper.folderIcon(folder.iconCode),
                           color: Color(folder.colorValue),
                           size: 28.r,
                         ),
@@ -1046,19 +1077,14 @@ class _DashboardPageState extends State<DashboardPage> {
               padding: EdgeInsets.all(20.r),
               child: Column(
                 children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(12.r),
-                    child: CachedNetworkImage(
-                      imageUrl:
-                          'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=400&q=80',
-                      height: 120.h,
-                      width: 200.w,
-                      fit: BoxFit.cover,
-                      placeholder: (context, url) =>
-                          const CircularProgressIndicator(),
-                      errorWidget: (context, url, error) =>
-                          const Icon(Icons.folder_open_rounded, size: 48),
+                  Container(
+                    height: 120.h,
+                    width: 200.w,
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(12.r),
                     ),
+                    child: const Icon(Icons.folder_open_rounded, size: 48),
                   ),
                   Gap(12.h),
                   Text(

@@ -18,16 +18,20 @@ class DocumentCubit extends Cubit<DocumentState> {
     try {
       final documents = _repository.getDocuments();
       final folders = _repository.getFolders();
-      emit(state.copyWith(
-        documents: documents,
-        folders: folders,
-        status: DocumentStatus.success,
-      ));
+      emit(
+        state.copyWith(
+          documents: documents,
+          folders: folders,
+          status: DocumentStatus.success,
+        ),
+      );
     } catch (e) {
-      emit(state.copyWith(
-        status: DocumentStatus.error,
-        errorMessage: 'Failed to load documents: ${e.toString()}',
-      ));
+      emit(
+        state.copyWith(
+          status: DocumentStatus.error,
+          errorMessage: 'Failed to load documents: ${e.toString()}',
+        ),
+      );
     }
   }
 
@@ -46,10 +50,12 @@ class DocumentCubit extends Cubit<DocumentState> {
       await _repository.addFolder(newFolder);
       loadAllData();
     } catch (e) {
-      emit(state.copyWith(
-        status: DocumentStatus.error,
-        errorMessage: 'Failed to create folder: ${e.toString()}',
-      ));
+      emit(
+        state.copyWith(
+          status: DocumentStatus.error,
+          errorMessage: 'Failed to create folder: ${e.toString()}',
+        ),
+      );
     }
   }
 
@@ -76,20 +82,24 @@ class DocumentCubit extends Cubit<DocumentState> {
     try {
       // 1. Delete folder
       await _repository.deleteFolder(folderId);
-      
+
       // 2. Remove folder link from all documents in this folder
-      final documentsInFolder = state.documents.where((doc) => doc.folderId == folderId);
+      final documentsInFolder = state.documents.where(
+        (doc) => doc.folderId == folderId,
+      );
       for (final doc in documentsInFolder) {
-        final updatedDoc = doc.copyWith(folderId: null);
+        final updatedDoc = doc.copyWith(clearFolderId: true);
         await _repository.updateDocument(updatedDoc);
       }
-      
+
       loadAllData();
     } catch (e) {
-      emit(state.copyWith(
-        status: DocumentStatus.error,
-        errorMessage: 'Failed to delete folder: ${e.toString()}',
-      ));
+      emit(
+        state.copyWith(
+          status: DocumentStatus.error,
+          errorMessage: 'Failed to delete folder: ${e.toString()}',
+        ),
+      );
     }
   }
 
@@ -130,10 +140,12 @@ class DocumentCubit extends Cubit<DocumentState> {
       await _repository.addDocument(newDoc);
       loadAllData();
     } catch (e) {
-      emit(state.copyWith(
-        status: DocumentStatus.error,
-        errorMessage: 'Failed to add document: ${e.toString()}',
-      ));
+      emit(
+        state.copyWith(
+          status: DocumentStatus.error,
+          errorMessage: 'Failed to add document: ${e.toString()}',
+        ),
+      );
     }
   }
 
@@ -141,7 +153,7 @@ class DocumentCubit extends Cubit<DocumentState> {
     emit(state.copyWith(status: DocumentStatus.loading));
     try {
       final doc = state.documents.firstWhere((d) => d.id == id);
-      
+
       // Physically delete the local copy of the file
       try {
         final file = File(doc.filePath);
@@ -167,10 +179,12 @@ class DocumentCubit extends Cubit<DocumentState> {
       await _repository.deleteDocument(id);
       loadAllData();
     } catch (e) {
-      emit(state.copyWith(
-        status: DocumentStatus.error,
-        errorMessage: 'Failed to delete document: ${e.toString()}',
-      ));
+      emit(
+        state.copyWith(
+          status: DocumentStatus.error,
+          errorMessage: 'Failed to delete document: ${e.toString()}',
+        ),
+      );
     }
   }
 
@@ -180,10 +194,12 @@ class DocumentCubit extends Cubit<DocumentState> {
       await _repository.updateDocument(updatedDoc);
       loadAllData();
     } catch (e) {
-      emit(state.copyWith(
-        status: DocumentStatus.error,
-        errorMessage: 'Failed to update document: ${e.toString()}',
-      ));
+      emit(
+        state.copyWith(
+          status: DocumentStatus.error,
+          errorMessage: 'Failed to update document: ${e.toString()}',
+        ),
+      );
     }
   }
 
@@ -230,10 +246,12 @@ class DocumentCubit extends Cubit<DocumentState> {
       }
       loadAllData();
     } catch (e) {
-      emit(state.copyWith(
-        status: DocumentStatus.error,
-        errorMessage: 'Failed to restore backup: ${e.toString()}',
-      ));
+      emit(
+        state.copyWith(
+          status: DocumentStatus.error,
+          errorMessage: 'Failed to restore backup: ${e.toString()}',
+        ),
+      );
     }
   }
 }

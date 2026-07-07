@@ -4,6 +4,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:gap/gap.dart';
 
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/helpers/icon_code_helper.dart';
 import '../../../../core/routing/app_router.dart';
 import '../../../document_manager/data/models/folder_model.dart';
 import '../../../document_manager/presentation/cubit/document_cubit.dart';
@@ -102,7 +103,7 @@ class _FolderDetailPageState extends State<FolderDetailPage> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
-              IconData(_folder.iconCode, fontFamily: 'MaterialIcons'),
+              IconCodeHelper.folderIcon(_folder.iconCode),
               color: Color(_folder.colorValue),
             ),
             Gap(10.w),
@@ -162,7 +163,7 @@ class _FolderDetailPageState extends State<FolderDetailPage> {
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
-                        IconData(_folder.iconCode, fontFamily: 'MaterialIcons'),
+                        IconCodeHelper.folderIcon(_folder.iconCode),
                         size: 64.r,
                         color: Color(_folder.colorValue).withOpacity(0.4),
                       ),
